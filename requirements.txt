@@ -1,0 +1,10 @@
+fastapi
+celery
+requests
+uvicorn
+redis
+langchain
+pydantic
+pytest
+langchain
+openai

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub PR Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .button {
+            padding: 10px 20px;
+            margin: 10px 0;
+            cursor: pointer;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+        }
+        input {
+            width: 50%;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>GitHub PR Code Analysis</h2>
+        <button class="button" id="check_system_status_btn" onclick="checkSystemStatus()">Check System Status</button>
+
+        <!-- Error Message -->
+        <div id="error_message" class="error" style="display:none;"></div>
+        
+        <div style="height:1rem;">
+            
+        </div>
+        <!-- Form for providing PR details -->
+        <div>
+            <label for="repo_url">Repository URL:</label>
+            <input type="text" id="repo_url" placeholder="https://github.com/username/repo"><br>
+            <label for="pr_number">PR Number:</label>
+            <input type="number" id="pr_number" placeholder="PR Number"><br>
+            <label for="github_token">GitHub Token (Optional):</label>
+            <input type="text" id="github_token" placeholder="Your GitHub Token"><br>
+        </div>
+        
+        <!-- Buttons -->
+        <button class="button" id="analyze_pr_btn" onclick="analyzePR()">Analyze PR</button>
+        <button class="button" id="check_status_btn" onclick="checkStatus()" disabled>Check Status</button>
+        <button class="button" id="view_results_btn" onclick="viewResults()" disabled>View Results</button>
+        
+        <!-- New Button for Checking System Status -->
+
+        <!-- Display Result -->
+        <div id="result_display" class="result" style="display:none;">
+            <h3>Result:</h3>
+            <pre id="result_json"></pre>
+        </div>
+
+    </div>
+
+    <script>
+        let taskId = null;
+
+        // Function to check the system status (FastAPI, Redis, Celery)
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/check-system-status');
+                const data = await response.json();
+                if (data.status === 'connected') {
+                    document.getElementById('check_system_status_btn').textContent = "Connected to the System";
+                    document.getElementById('error_message').style.display = 'none';
+                } else {
+                    document.getElementById('check_system_status_btn').textContent = data.status;
+                    document.getElementById('error_message').textContent = "There are issues with connecting the system. Please check FastAPI, Redis, and Celery.";
+                    document.getElementById('error_message').style.display = 'block';
+    
+                }
+            } catch (error) {
+                console.error('Error checking system status:', error);
+                document.getElementById('check_system_status_btn').textContent = "System Not Connected";
+                document.getElementById('error_message').textContent = "There are issues with connecting the system. Please check FastAPI, Redis, and Celery.";
+                document.getElementById('error_message').style.display = 'block';
+            }
+        }
+
+        // Function to trigger PR analysis
+        async function analyzePR() {
+            const repoUrl = document.getElementById('repo_url').value;
+            const prNumber = document.getElementById('pr_number').value;
+            const githubToken = document.getElementById('github_token').value;
+
+            const requestBody = {
+                repo_url: repoUrl,
+                pr_number: parseInt(prNumber),
+                github_token: githubToken
+            };
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/analyze-pr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+                taskId = data.task_id;
+                document.getElementById('check_status_btn').disabled = false;  // Enable the status check button
+                document.getElementById('view_results_btn').disabled = false; // Enable the results button
+                document.getElementById('result_display').style.display = 'none'; // Hide previous results
+                alert('PR analysis started! Task ID: ' + taskId);
+            } catch (error) {
+                console.error('Error analyzing PR:', error);
+                alert('Failed to trigger PR analysis.');
+            }
+        }
+
+        // Function to check task status
+        async function checkStatus() {
+            if (!taskId) {
+                alert('Please trigger the PR analysis first!');
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/status/${taskId}`);
+                const data = await response.json();
+
+                if (data.status === 'completed') {
+                    alert('Analysis completed!');
+                } else {
+                    alert('Task is still processing...');
+                }
+            } catch (error) {
+                console.error('Error checking status:', error);
+                alert('Failed to check status.');
+            }
+        }
+
+        // Function to view results
+        async function viewResults() {
+            if (!taskId) {
+                alert('Please trigger the PR analysis first!');
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/results/${taskId}`);
+                const data = await response.json();
+                
+                document.getElementById('result_display').style.display = 'block';
+                document.getElementById('result_json').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Error retrieving results:', error);
+                alert('Failed to retrieve results.');
+            }
+        }
+    </script>
+
+</body>
+</html>
