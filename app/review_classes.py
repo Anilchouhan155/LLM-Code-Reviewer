@@ -1,5 +1,6 @@
 # review_classes.py
 
+import re
 from github import Github
 from langchain.prompts import PromptTemplate
 from langchain.schema import AIMessage
@@ -43,29 +44,37 @@ class PRSummaryChain:
 
 class CodeReviewChain:
     def __init__(self, llm):
-        # Create a runnable sequence with prompt and llm
         self.sequence = PromptTemplate(input_variables=["code"], template=CODE_REVIEW_TEMPLATE) | llm
 
     def review_file(self, file_content):
         """Perform code review on the entire content of a file."""
-        print("####################################")
-        print(file_content)
-        print("####################################")
-
         response = self.sequence.invoke({"code": file_content})
 
+        # Ensure response is accessed as text
         if isinstance(response, AIMessage):
             response = response.content
 
-        # Check if response is a dictionary, if not, parse it as JSON
-        if isinstance(response, str):
-            try:
-                response = json.loads(response)
-            except json.JSONDecodeError:
-                response = []
-
-        return response if isinstance(response, list) else []
-
+        print("Received at line 57:", response)
+        # Check for multiple JSON-like objects and parse them individually
+        issues = []
+        try:
+            # Use regex to extract each JSON-like block
+            json_objects = re.findall(r'\{.*?\}', response, re.DOTALL)
+            for obj in json_objects:
+                try:
+                    # Parse each JSON object and append to issues list
+                    parsed_issue = json.loads(obj)
+                    if isinstance(parsed_issue, dict):
+                        issues.append(parsed_issue)
+                except json.JSONDecodeError:
+                    print("Warning: Could not decode a part of the response as JSON. Part:", obj)
+                    
+        except Exception as e:
+            print(f"Error: Could not process response. {e}")
+            print("Received:", response)
+        
+        return issues
+        
     def review_pull_request(self, files_content):
         """Perform code review on all files in the pull request."""
         reviews = []

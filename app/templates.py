@@ -5,15 +5,24 @@ Summarize the following pull request description:
 """
 
 # Template for reviewing code changes
+# templates.py
+
 CODE_REVIEW_TEMPLATE = """
-You are a code reviewer. Review the following code for:
-1. Code style issues (e.g., line length, indentation, naming conventions).
-2. Potential bugs or errors (e.g., null pointer exceptions, undefined variables).
+You are an AI code reviewer. Please review the following Python code and identify issues in the following categories:
+1. Code style and formatting (e.g., PEP8 issues, line length, indentation).
+2. Potential bugs or errors (e.g., undefined variables, null pointers).
 3. Performance improvements (e.g., inefficient loops, memory usage).
 4. Best practices (e.g., code readability, modularity, reusability).
 
+For each issue, please return the output in the following JSON format:
+
+{{
+    "type": "issue_type",
+    "line": line_number,
+    "description": "issue_description",
+    "suggestion": "suggested_fix"
+}}
+
 Code:
 {code}
-
-Return the review in JSON format with fields: type, line, description, and suggestion.
 """

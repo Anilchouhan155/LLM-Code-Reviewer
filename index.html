@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub PR Analysis</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/json-viewer-js@1.0.0/json-viewer.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/json-viewer-js@1.0.0/json-viewer.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -55,9 +57,8 @@
         <!-- Error Message -->
         <div id="error_message" class="error" style="display:none;"></div>
         
-        <div style="height:1rem;">
-            
-        </div>
+        <div style="height:1rem;"></div>
+        
         <!-- Form for providing PR details -->
         <div>
             <label for="repo_url">Repository URL:</label>
@@ -73,12 +74,12 @@
         <button class="button" id="check_status_btn" onclick="checkStatus()" disabled>Check Status</button>
         <button class="button" id="view_results_btn" onclick="viewResults()" disabled>View Results</button>
         
-        <!-- New Button for Checking System Status -->
-
         <!-- Display Result -->
         <div id="result_display" class="result" style="display:none;">
             <h3>Result:</h3>
-            <pre id="result_json"></pre>
+            <!-- <div id="result_json"></div> -->
+            <code id="result_json">
+            </code>
         </div>
 
     </div>
@@ -98,7 +99,6 @@
                     document.getElementById('check_system_status_btn').textContent = data.status;
                     document.getElementById('error_message').textContent = "There are issues with connecting the system. Please check FastAPI, Redis, and Celery.";
                     document.getElementById('error_message').style.display = 'block';
-    
                 }
             } catch (error) {
                 console.error('Error checking system status:', error);
@@ -173,9 +173,16 @@
             try {
                 const response = await fetch(`http://127.0.0.1:8000/results/${taskId}`);
                 const data = await response.json();
+
+                // Show the result display section
+                const resultDisplay = document.getElementById('result_display');
+                resultDisplay.style.display = 'block';
+
+                // Format JSON data for better readability
+                const formattedJson = data;
                 
-                document.getElementById('result_display').style.display = 'block';
-                document.getElementById('result_json').textContent = JSON.stringify(data, null, 2);
+                // Use innerHTML with <pre> tags to display properly formatted JSON
+                document.getElementById('result_json').innerHTML = `<pre>${formattedJson}</pre>`;
             } catch (error) {
                 console.error('Error retrieving results:', error);
                 alert('Failed to retrieve results.');
